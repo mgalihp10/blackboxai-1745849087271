@@ -1,8 +1,28 @@
 require('dotenv').config();
 const express = require('express');
+const https = require('https');
+const fs = require('fs');
 const db = require('./db');
 
 const app = express();
+
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH || './ssl/key.pem';
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH || './ssl/cert.pem';
+
+let server;
+
+try {
+  const key = fs.readFileSync(SSL_KEY_PATH);
+  const cert = fs.readFileSync(SSL_CERT_PATH);
+  server = https.createServer({ key, cert }, app);
+  console.log('Database service running with SSL');
+} catch (err) {
+  console.warn('SSL certificates not found or invalid, falling back to HTTP');
+  server = app.listen(process.env.PORT || 3002, () => {
+    console.log(`Database service running on port ${process.env.PORT || 3002}`);
+  });
+}
+
 app.use(express.json());
 
 app.get('/health', (req, res) => {
@@ -77,7 +97,4 @@ app.get('/messages', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
-  console.log(`Database service running on port ${PORT}`);
-});
+server.listen(process.env.PORT || 3002);
