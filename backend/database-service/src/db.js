@@ -2,7 +2,7 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL || 'postgresql://whatsapp_user:whatsapp_pass@localhost:5432/whatsapp_db'
 });
 
 const createTables = async () => {
