@@ -1,12 +1,34 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
+const https = require('https');
+const fs = require('fs');
 
 const app = express();
 app.use(express.json());
 
 const WHATSAPP_SERVICE_URL = process.env.WHATSAPP_SERVICE_URL || 'http://localhost:3001';
 const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'http://localhost:3002';
+
+const PORT = process.env.PORT || 3000;
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH || './ssl/key.pem';
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH || './ssl/cert.pem';
+
+let server;
+
+try {
+  const key = fs.readFileSync(SSL_KEY_PATH);
+  const cert = fs.readFileSync(SSL_CERT_PATH);
+  server = https.createServer({ key, cert }, app);
+  server.listen(PORT, () => {
+    console.log(`API Gateway running with SSL on port ${PORT}`);
+  });
+} catch (err) {
+  console.warn('SSL certificates not found or invalid, falling back to HTTP');
+  server = app.listen(PORT, () => {
+    console.log(`API Gateway running on port ${PORT}`);
+  });
+}
 
 // Health check
 app.get('/health', (req, res) => {
@@ -69,9 +91,4 @@ app.get('/messages', async (req, res) => {
   } catch (error) {
     res.status(error.response?.status || 500).json({ error: error.message });
   }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`API Gateway running on port ${PORT}`);
 });
